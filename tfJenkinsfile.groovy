@@ -8,7 +8,7 @@
         string(defaultValue: '', description: 'Resource Group Name', name: 'ResourceGroup')
         string(defaultValue: 'Devops', description: 'Resource Group Name', name: 'Terraform_StorageAccount_ResourceGroup')
         string(defaultValue: 'devstore1', description: 'Resource Group Name', name: 'Terraform_StorageAccount_Name')
-        string(defaultValue: '', description: 'application Name', name: 'appName1')
+        string(defaultValue: '', description: 'application Name', name: 'appName')
         choice(name: 'Environment', choices: ['Dev', 'Stage', 'Prod'], description: 'Select deployment environment')
         
 	
@@ -17,9 +17,11 @@
     environment {
         PS_FILE = 'terraform_vm.ps1'
         TF_VAR_client_id = credentials('terraform_managed_identity')
-	    TF_VAR_tenant_id = credentials('Azure_TenantId')
-	    TF_VAR_subscription_id = credentials('subscription_id')
-        varFile = "'./deployment_configs/${env.RFC}.tfvars'"
+	TF_VAR_tenant_id = credentials('Azure_TenantId')
+	TF_VAR_subscription_id = credentials('subscription_id')
+        ADO_URL = ""
+        ADO_PAT = credentials('')
+        varFile = "'./deployment_configs/${env.appName}_${env.RFC}.tfvars'"
     }
     stages {
         stage('Set Build Name'){
@@ -75,6 +77,25 @@
                 }
             }
         }
+        stage('Push .tfvars File') {
+            steps{
+                script{
+
+                    powershell(script: """
+                        git config --global user.email "xavi0ne@jenkins001.(none)"
+                        git config --global user.name "xavi0ne"
+
+                        git init
+                        git remote set-url origin https://xavi0ne:${env.ADO_PAT}@${env.ADO_URL}
+                        git checkout main
+                        cd "./applications/terraform_poc/modules_windows"
+                        git add $varFile
+                        git commit -m "Adding tfvars file from Jenkins build"
+                        git push -u origin main
+                    """)
+                }
+            }
+        }
         stage('Initiate Terraform in Dev') {
             when {
                 expression { params.Environment == 'Dev' }
@@ -83,7 +104,7 @@
                 script {
 
                     powershell (script: """
-                    terraform -chdir="./applications/terraform_poc/modules_windows" init -backend-config=\"key=./${env.Environment}/${env.APP_NAME}_terraform.tfstate\" -var-file=$varFile
+                    terraform -chdir="./applications/terraform_poc/modules_windows" init -backend-config=\"key=./${env.Environment}/${env.APP_NAME}_${env.RFC}.tfstate\" -var-file=$varFile
                     """)
                 }
             }
