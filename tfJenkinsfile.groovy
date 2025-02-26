@@ -82,11 +82,11 @@
                 script{
 
                     powershell(script: """
-                        git config --global user.email "xavi0ne@jenkins001.(none)"
-                        git config --global user.name "xavi0ne"
+                        git config --global user.email "<username@email>"
+                        git config --global user.name "<userName>"
 
                         git init
-                        git remote set-url origin https://xavi0ne:${env.ADO_PAT}@${env.ADO_URL}
+                        git remote set-url origin https://<userName>:${env.ADO_PAT}@${env.ADO_URL}
                         git checkout main
                         cd "./applications/terraform_poc/modules_windows"
                         git add $varFile
@@ -263,4 +263,4 @@
             }
         }
     }
-} 
+}
